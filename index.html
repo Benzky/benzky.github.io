@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.8.1" />
 <title>kdtree API documentation</title>
-<meta name="description" content="" />
+<meta name="description" content="This module is a library containing the k-d tree class …" />
 <link href='https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css' rel='stylesheet'>
 <link href='https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/8.0.0/sanitize.min.css' rel='stylesheet'>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css" rel="stylesheet">
@@ -20,18 +20,94 @@
 <h1 class="title">Module <code>kdtree</code></h1>
 </header>
 <section id="section-intro">
+<p>This module is a library containing the k-d tree class.</p>
+<p>A k-d tree, or k-dimensional binary search tree, is a data structure
+used for organizing points in a k-dimensional space. Because of the
+tree structure nearest neighbor searches only take O(log n) time.</p>
+<p>The k-d tree in this module is an unblanaced k-d tree. This means
+that adding elements frequently will make the tree unbalanced and
+risk losing the advantages of the data structure.</p>
+<h2 id="example">Example</h2>
+<p>Example usage:</p>
+<pre><code>&gt;&gt;&gt; from kdtree import kdtree
+&gt;&gt;&gt; tree = kdtree([(1,1),(-3,0.6),(100,32),(32,0x42)])
+&gt;&gt;&gt; tree
+((32, 66), ((1, 1), ((-3, 0.6), None, None), None), ((100, 32), None, None))
+
+&gt;&gt;&gt; tree.nearest((-2,1))
+(-3, 0.6)
+&gt;&gt;&gt; tree.nearest((50,0))
+(1, 1)
+
+&gt;&gt;&gt; tree.list()
+[(32, 66), (1, 1), (-3, 0.6), (100, 32)]
+
+&gt;&gt;&gt; tree.add((9,3))
+&gt;&gt;&gt; tree.list()
+[(32, 66), (1, 1), (-3, 0.6), (9, 3), (100, 32)]
+</code></pre>
+<h2 id="todo">Todo</h2>
+<ul>
+<li>Add a remove method.</li>
+<li>Make it a balanced tree.</li>
+<li>Improve documentation.</li>
+</ul>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python"># Koden kan vara inspirerad av den som finns på wikipedia. Men troligtvis inte så bry dig
-# inte ens om att kolla efter. ;)
-# Om något är fel skicka gärna ett mail till vmel@kth.se
+<pre><code class="python">&#34;&#34;&#34;This module is a library containing the k-d tree class.
+
+A k-d tree, or k-dimensional binary search tree, is a data structure
+used for organizing points in a k-dimensional space. Because of the
+tree structure nearest neighbor searches only take O(log n) time.
+
+The k-d tree in this module is an unblanaced k-d tree. This means
+that adding elements frequently will make the tree unbalanced and
+risk losing the advantages of the data structure.
+
+Example:
+    Example usage:
+        
+        &gt;&gt;&gt; from kdtree import kdtree
+        &gt;&gt;&gt; tree = kdtree([(1,1),(-3,0.6),(100,32),(32,0x42)])
+        &gt;&gt;&gt; tree
+        ((32, 66), ((1, 1), ((-3, 0.6), None, None), None), ((100, 32), None, None))
+        
+        &gt;&gt;&gt; tree.nearest((-2,1))
+        (-3, 0.6)
+        &gt;&gt;&gt; tree.nearest((50,0))
+        (1, 1)
+        
+        &gt;&gt;&gt; tree.list()
+        [(32, 66), (1, 1), (-3, 0.6), (100, 32)]
+        
+        &gt;&gt;&gt; tree.add((9,3))
+        &gt;&gt;&gt; tree.list()
+        [(32, 66), (1, 1), (-3, 0.6), (9, 3), (100, 32)]
+
+Todo:
+    * Add a remove method.
+    * Make it a balanced tree.
+    * Improve documentation.
+&#34;&#34;&#34;
 
 class kdtree:
-    &#34;&#34;&#34;It&#39;s a k-d tree&#34;&#34;&#34;
+    &#34;&#34;&#34;A class for storing and searching for points in k-dimensional space.
+    
+    Attributes:
+        point (tuple): A k-tuple representing a point in k-d space.
+        left (Any): The left branch of this tree. Either another k-d tree or None.
+        right (Any): The right branch of this tree. Either another k-d tree or None.
+        axis (int): An integer specifying the axis this point is splitting the space.
+    &#34;&#34;&#34;
     
     def __init__(self, points, depth = 0):
+        &#34;&#34;&#34;
+        Args:
+            points (List[tuple]): List of k-tuples to add to the k-d tree.
+            depth (int): Depth of the k-d tree.
+        &#34;&#34;&#34;
         n = len(points[0])
         
         self.axis = depth % n
@@ -43,9 +119,17 @@ class kdtree:
         self.left = kdtree(points[:mid], depth + 1) if points[:mid] else None
         self.right = kdtree(points[mid + 1:], depth + 1) if points[mid + 1:] else None
     
-    
     def nearest(self, point, best = None):
-        &#34;&#34;&#34;Return the point closest to the point given with a nearest neighbor search.&#34;&#34;&#34;
+        &#34;&#34;&#34;Returns the point in the tree closest to the search target
+        using nearest neighbor search.
+        
+        Args:
+            point (tuple): The search target. 
+            best (tuple): The point in the tree currently closest to the search target.
+        
+        Returns:
+            tuple: The point in the tree closest to the search target.
+        &#34;&#34;&#34;
         # Bara avliva mig nu
         if self is None:
             return best
@@ -63,6 +147,11 @@ class kdtree:
         return best
     
     def add(self, point):
+        &#34;&#34;&#34;Adds a point as a leaf to the correct branch of the tree.
+        
+        Args:
+            point (tuple): The point to add.
+        &#34;&#34;&#34;
         if point[self.axis] &lt; self.point[self.axis]:
             if self.left:
                 self.left.add(point)
@@ -74,13 +163,17 @@ class kdtree:
             else:
                 self.right = kdtree([point])
     
-    def rebalance(self):
-        &#34;&#34;&#34;Rebalances the tree in an unoptimal way.&#34;&#34;&#34;
-        self.__init__(self.list())
-    
+    def recreate(self):
+        &#34;&#34;&#34;Rebalances the tree by recreating it from scratch.
+        &#34;&#34;&#34;
+        self.__init__(self.list(), 0 if self.axis == 0 else 1)
     
     def list(self):
-        &#34;&#34;&#34;Return all points in the tree in some order.&#34;&#34;&#34;
+        &#34;&#34;&#34;Returns an unsorted list of all the points in the tree.
+        
+        Returns:
+            List[tuple]: An unsorted list of points in the tree.            
+        &#34;&#34;&#34;
         return self._listhelp([])
     
     def _listhelp(self, list):
@@ -91,48 +184,36 @@ class kdtree:
             self.right._listhelp(list)
         return list
     
-    
     def _bestchild(self, point):
-        # Nya rön tyder på att det är effektivt att utnyttja alla fördelar med den data struktur du valt
+        # Nya rön tyder på att det är effektivt att utnyttja
+        # alla fördelar med den data struktur du valt
         if point[self.axis] &lt; self.point[self.axis]:
             return self.left if self.left else None
         return self.right if self.right else None
     
-    
     def _axisdist(self, point):
-        # Stor applåd till tuple för att inte kunna bli ändra innehåll
+        # Stor applåd till tuple för att inte kunna ändra innehåll
         axpoint = list(point)
         axpoint[self.axis] = self.point[self.axis]
         return self._distsquared(tuple(axpoint), point)
-    
     
     def _notbestchild(self, point):
         if self._bestchild(point) is self.left:
             return self.right
         return self.left
     
-    
     def _distsquared(self, a, b):
         if len(a) != len(b):
-            raise &#34;waddafuggman&#34;
+            raise &#34;Tree contains points of different dimensions.&#34;
         return sum([(a[i]-b[i])**2 for i in range(len(a))])
     
-    
     def __repr__(self):
-        return &#34;, &#34;.join([str(self.point),self.left.__repr__(),self.right.__repr__()]).join([&#34;(&#34;,&#34;)&#34;])
-
-
-def main():
-    point_list = [(7,2), (5,4), (9,6), (4,7), (8,1), (2,3)]
-    tree = kdtree(point_list)
-    print(tree)
-    print(tree.nearest((7,2)))
-    print(tree.nearest((6.9,6)))
-    print(tree.nearest((1,1)))
-    print(tree.nearest((5,5)))
-    
-    
-if __name__ == &#39;__main__&#39;: main()</code></pre>
+        &#34;&#34;&#34;Returns a string representation of the k-d tree.
+        
+        Returns:
+            string: A representation of the tree.
+        &#34;&#34;&#34;
+        return &#34;, &#34;.join([str(self.point),self.left.__repr__(),self.right.__repr__()]).join([&#34;(&#34;,&#34;)&#34;])</code></pre>
 </details>
 </section>
 <section>
@@ -140,28 +221,6 @@ if __name__ == &#39;__main__&#39;: main()</code></pre>
 <section>
 </section>
 <section>
-<h2 class="section-title" id="header-functions">Functions</h2>
-<dl>
-<dt id="kdtree.main"><code class="name flex">
-<span>def <span class="ident">main</span></span>(<span>)</span>
-</code></dt>
-<dd>
-<div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def main():
-    point_list = [(7,2), (5,4), (9,6), (4,7), (8,1), (2,3)]
-    tree = kdtree(point_list)
-    print(tree)
-    print(tree.nearest((7,2)))
-    print(tree.nearest((6.9,6)))
-    print(tree.nearest((1,1)))
-    print(tree.nearest((5,5)))</code></pre>
-</details>
-</dd>
-</dl>
 </section>
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
@@ -171,15 +230,45 @@ if __name__ == &#39;__main__&#39;: main()</code></pre>
 <span>(</span><span>points, depth=0)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>It's a k-d tree</p></div>
+<div class="desc"><p>A class for storing and searching for points in k-dimensional space.</p>
+<h2 id="attributes">Attributes</h2>
+<dl>
+<dt><strong><code>point</code></strong> :&ensp;<code>tuple</code></dt>
+<dd>A k-tuple representing a point in k-d space.</dd>
+<dt><strong><code>left</code></strong> :&ensp;<code>Any</code></dt>
+<dd>The left branch of this tree. Either another k-d tree or None.</dd>
+<dt><strong><code>right</code></strong> :&ensp;<code>Any</code></dt>
+<dd>The right branch of this tree. Either another k-d tree or None.</dd>
+<dt><strong><code>axis</code></strong> :&ensp;<code>int</code></dt>
+<dd>An integer specifying the axis this point is splitting the space.</dd>
+</dl>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>points</code></strong> :&ensp;<code>List[tuple]</code></dt>
+<dd>List of k-tuples to add to the k-d tree.</dd>
+<dt><strong><code>depth</code></strong> :&ensp;<code>int</code></dt>
+<dd>Depth of the k-d tree.</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class kdtree:
-    &#34;&#34;&#34;It&#39;s a k-d tree&#34;&#34;&#34;
+    &#34;&#34;&#34;A class for storing and searching for points in k-dimensional space.
+    
+    Attributes:
+        point (tuple): A k-tuple representing a point in k-d space.
+        left (Any): The left branch of this tree. Either another k-d tree or None.
+        right (Any): The right branch of this tree. Either another k-d tree or None.
+        axis (int): An integer specifying the axis this point is splitting the space.
+    &#34;&#34;&#34;
     
     def __init__(self, points, depth = 0):
+        &#34;&#34;&#34;
+        Args:
+            points (List[tuple]): List of k-tuples to add to the k-d tree.
+            depth (int): Depth of the k-d tree.
+        &#34;&#34;&#34;
         n = len(points[0])
         
         self.axis = depth % n
@@ -191,9 +280,17 @@ if __name__ == &#39;__main__&#39;: main()</code></pre>
         self.left = kdtree(points[:mid], depth + 1) if points[:mid] else None
         self.right = kdtree(points[mid + 1:], depth + 1) if points[mid + 1:] else None
     
-    
     def nearest(self, point, best = None):
-        &#34;&#34;&#34;Return the point closest to the point given with a nearest neighbor search.&#34;&#34;&#34;
+        &#34;&#34;&#34;Returns the point in the tree closest to the search target
+        using nearest neighbor search.
+        
+        Args:
+            point (tuple): The search target. 
+            best (tuple): The point in the tree currently closest to the search target.
+        
+        Returns:
+            tuple: The point in the tree closest to the search target.
+        &#34;&#34;&#34;
         # Bara avliva mig nu
         if self is None:
             return best
@@ -211,6 +308,11 @@ if __name__ == &#39;__main__&#39;: main()</code></pre>
         return best
     
     def add(self, point):
+        &#34;&#34;&#34;Adds a point as a leaf to the correct branch of the tree.
+        
+        Args:
+            point (tuple): The point to add.
+        &#34;&#34;&#34;
         if point[self.axis] &lt; self.point[self.axis]:
             if self.left:
                 self.left.add(point)
@@ -222,13 +324,17 @@ if __name__ == &#39;__main__&#39;: main()</code></pre>
             else:
                 self.right = kdtree([point])
     
-    def rebalance(self):
-        &#34;&#34;&#34;Rebalances the tree in an unoptimal way.&#34;&#34;&#34;
-        self.__init__(self.list())
-    
+    def recreate(self):
+        &#34;&#34;&#34;Rebalances the tree by recreating it from scratch.
+        &#34;&#34;&#34;
+        self.__init__(self.list(), 0 if self.axis == 0 else 1)
     
     def list(self):
-        &#34;&#34;&#34;Return all points in the tree in some order.&#34;&#34;&#34;
+        &#34;&#34;&#34;Returns an unsorted list of all the points in the tree.
+        
+        Returns:
+            List[tuple]: An unsorted list of points in the tree.            
+        &#34;&#34;&#34;
         return self._listhelp([])
     
     def _listhelp(self, list):
@@ -239,34 +345,35 @@ if __name__ == &#39;__main__&#39;: main()</code></pre>
             self.right._listhelp(list)
         return list
     
-    
     def _bestchild(self, point):
-        # Nya rön tyder på att det är effektivt att utnyttja alla fördelar med den data struktur du valt
+        # Nya rön tyder på att det är effektivt att utnyttja
+        # alla fördelar med den data struktur du valt
         if point[self.axis] &lt; self.point[self.axis]:
             return self.left if self.left else None
         return self.right if self.right else None
     
-    
     def _axisdist(self, point):
-        # Stor applåd till tuple för att inte kunna bli ändra innehåll
+        # Stor applåd till tuple för att inte kunna ändra innehåll
         axpoint = list(point)
         axpoint[self.axis] = self.point[self.axis]
         return self._distsquared(tuple(axpoint), point)
-    
     
     def _notbestchild(self, point):
         if self._bestchild(point) is self.left:
             return self.right
         return self.left
     
-    
     def _distsquared(self, a, b):
         if len(a) != len(b):
-            raise &#34;waddafuggman&#34;
+            raise &#34;Tree contains points of different dimensions.&#34;
         return sum([(a[i]-b[i])**2 for i in range(len(a))])
     
-    
     def __repr__(self):
+        &#34;&#34;&#34;Returns a string representation of the k-d tree.
+        
+        Returns:
+            string: A representation of the tree.
+        &#34;&#34;&#34;
         return &#34;, &#34;.join([str(self.point),self.left.__repr__(),self.right.__repr__()]).join([&#34;(&#34;,&#34;)&#34;])</code></pre>
 </details>
 <h3>Methods</h3>
@@ -275,12 +382,22 @@ if __name__ == &#39;__main__&#39;: main()</code></pre>
 <span>def <span class="ident">add</span></span>(<span>self, point)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Adds a point as a leaf to the correct branch of the tree.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>point</code></strong> :&ensp;<code>tuple</code></dt>
+<dd>The point to add.</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def add(self, point):
+    &#34;&#34;&#34;Adds a point as a leaf to the correct branch of the tree.
+    
+    Args:
+        point (tuple): The point to add.
+    &#34;&#34;&#34;
     if point[self.axis] &lt; self.point[self.axis]:
         if self.left:
             self.left.add(point)
@@ -297,13 +414,22 @@ if __name__ == &#39;__main__&#39;: main()</code></pre>
 <span>def <span class="ident">list</span></span>(<span>self)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Return all points in the tree in some order.</p></div>
+<div class="desc"><p>Returns an unsorted list of all the points in the tree.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>List[tuple]</code></dt>
+<dd>An unsorted list of points in the tree.</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def list(self):
-    &#34;&#34;&#34;Return all points in the tree in some order.&#34;&#34;&#34;
+    &#34;&#34;&#34;Returns an unsorted list of all the points in the tree.
+    
+    Returns:
+        List[tuple]: An unsorted list of points in the tree.            
+    &#34;&#34;&#34;
     return self._listhelp([])</code></pre>
 </details>
 </dd>
@@ -311,13 +437,35 @@ if __name__ == &#39;__main__&#39;: main()</code></pre>
 <span>def <span class="ident">nearest</span></span>(<span>self, point, best=None)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Return the point closest to the point given with a nearest neighbor search.</p></div>
+<div class="desc"><p>Returns the point in the tree closest to the search target
+using nearest neighbor search.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>point</code></strong> :&ensp;<code>tuple</code></dt>
+<dd>The search target. </dd>
+<dt><strong><code>best</code></strong> :&ensp;<code>tuple</code></dt>
+<dd>The point in the tree currently closest to the search target.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tuple</code></dt>
+<dd>The point in the tree closest to the search target.</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def nearest(self, point, best = None):
-    &#34;&#34;&#34;Return the point closest to the point given with a nearest neighbor search.&#34;&#34;&#34;
+    &#34;&#34;&#34;Returns the point in the tree closest to the search target
+    using nearest neighbor search.
+    
+    Args:
+        point (tuple): The search target. 
+        best (tuple): The point in the tree currently closest to the search target.
+    
+    Returns:
+        tuple: The point in the tree closest to the search target.
+    &#34;&#34;&#34;
     # Bara avliva mig nu
     if self is None:
         return best
@@ -335,18 +483,19 @@ if __name__ == &#39;__main__&#39;: main()</code></pre>
     return best</code></pre>
 </details>
 </dd>
-<dt id="kdtree.kdtree.rebalance"><code class="name flex">
-<span>def <span class="ident">rebalance</span></span>(<span>self)</span>
+<dt id="kdtree.kdtree.recreate"><code class="name flex">
+<span>def <span class="ident">recreate</span></span>(<span>self)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Rebalances the tree in an unoptimal way.</p></div>
+<div class="desc"><p>Rebalances the tree by recreating it from scratch.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def rebalance(self):
-    &#34;&#34;&#34;Rebalances the tree in an unoptimal way.&#34;&#34;&#34;
-    self.__init__(self.list())</code></pre>
+<pre><code class="python">def recreate(self):
+    &#34;&#34;&#34;Rebalances the tree by recreating it from scratch.
+    &#34;&#34;&#34;
+    self.__init__(self.list(), 0 if self.axis == 0 else 1)</code></pre>
 </details>
 </dd>
 </dl>
@@ -360,11 +509,6 @@ if __name__ == &#39;__main__&#39;: main()</code></pre>
 <ul></ul>
 </div>
 <ul id="index">
-<li><h3><a href="#header-functions">Functions</a></h3>
-<ul class="">
-<li><code><a title="kdtree.main" href="#kdtree.main">main</a></code></li>
-</ul>
-</li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
@@ -373,7 +517,7 @@ if __name__ == &#39;__main__&#39;: main()</code></pre>
 <li><code><a title="kdtree.kdtree.add" href="#kdtree.kdtree.add">add</a></code></li>
 <li><code><a title="kdtree.kdtree.list" href="#kdtree.kdtree.list">list</a></code></li>
 <li><code><a title="kdtree.kdtree.nearest" href="#kdtree.kdtree.nearest">nearest</a></code></li>
-<li><code><a title="kdtree.kdtree.rebalance" href="#kdtree.kdtree.rebalance">rebalance</a></code></li>
+<li><code><a title="kdtree.kdtree.recreate" href="#kdtree.kdtree.recreate">recreate</a></code></li>
 </ul>
 </li>
 </ul>
