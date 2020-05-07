@@ -99,7 +99,7 @@ class kdtree:
         point (tuple): A k-tuple representing a point in k-d space.
         left (Any): The left branch of this tree. Either another k-d tree or None.
         right (Any): The right branch of this tree. Either another k-d tree or None.
-        axis (int): An integer specifying the axis this point is splitting the space.
+        axis (int): An integer specifying the axis which coincides with the normal to the hyperplane splitting the space.
     &#34;&#34;&#34;
     
     def __init__(self, points, depth = 0):
@@ -240,7 +240,7 @@ class kdtree:
 <dt><strong><code>right</code></strong> :&ensp;<code>Any</code></dt>
 <dd>The right branch of this tree. Either another k-d tree or None.</dd>
 <dt><strong><code>axis</code></strong> :&ensp;<code>int</code></dt>
-<dd>An integer specifying the axis this point is splitting the space.</dd>
+<dd>An integer specifying the axis which coincides with the normal to the hyperplane splitting the space.</dd>
 </dl>
 <h2 id="args">Args</h2>
 <dl>
@@ -260,7 +260,7 @@ class kdtree:
         point (tuple): A k-tuple representing a point in k-d space.
         left (Any): The left branch of this tree. Either another k-d tree or None.
         right (Any): The right branch of this tree. Either another k-d tree or None.
-        axis (int): An integer specifying the axis this point is splitting the space.
+        axis (int): An integer specifying the axis which coincides with the normal to the hyperplane splitting the space.
     &#34;&#34;&#34;
     
     def __init__(self, points, depth = 0):
