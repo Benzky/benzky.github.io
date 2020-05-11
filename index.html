@@ -48,7 +48,6 @@ risk losing the advantages of the data structure.</p>
 </code></pre>
 <h2 id="todo">Todo</h2>
 <ul>
-<li>Add a remove method.</li>
 <li>Make it a balanced tree.</li>
 <li>Improve documentation.</li>
 </ul>
@@ -87,7 +86,6 @@ Example:
         [(32, 66), (1, 1), (-3, 0.6), (9, 3), (100, 32)]
 
 Todo:
-    * Add a remove method.
     * Make it a balanced tree.
     * Improve documentation.
 &#34;&#34;&#34;
@@ -108,20 +106,32 @@ class kdtree:
             points (List[tuple]): List of k-tuples to add to the k-d tree.
             depth (int): Depth of the k-d tree.
         &#34;&#34;&#34;
-        n = len(points[0])
-        
-        self.axis = depth % n
-        
-        points.sort(key = lambda x: x[self.axis])
-        mid = len(points)//2
+        if points:
+            n = len(points[0])
             
-        self.point = points[mid]
-        self.left = kdtree(points[:mid], depth + 1) if points[:mid] else None
-        self.right = kdtree(points[mid + 1:], depth + 1) if points[mid + 1:] else None
+            self.axis = depth % n
+            
+            points.sort(key = lambda x: x[self.axis])
+            mid = len(points)//2
+            
+            self.point = points[mid]
+            self.left = kdtree(points[:mid], depth + 1) if points[:mid] else None
+            self.right = kdtree(points[mid + 1:], depth + 1) if points[mid + 1:] else None
+        else:
+            self.point = None
+            self.right = None
+            self.left = None
+            if self.right:
+                del self.right
+            if self.left:
+                del self.left
     
     def nearest(self, point, best = None):
         &#34;&#34;&#34;Returns the point in the tree closest to the search target
         using nearest neighbor search.
+        
+        If there are more than one the same distance away from the point
+        it returns one of them.
         
         Args:
             point (tuple): The search target. 
@@ -152,21 +162,25 @@ class kdtree:
         Args:
             point (tuple): The point to add.
         &#34;&#34;&#34;
-        if point[self.axis] &lt; self.point[self.axis]:
-            if self.left:
-                self.left.add(point)
+        if self.point:
+            if point[self.axis] &lt; self.point[self.axis]:
+                if self.left:
+                    self.left.add(point)
+                else:
+                    self.left = kdtree([point])
             else:
-                self.left = kdtree([point])
+                if self.right:
+                    self.right.add(point)
+                else:
+                    self.right = kdtree([point])
         else:
-            if self.right:
-                self.right.add(point)
-            else:
-                self.right = kdtree([point])
+            self.__init__([point])
     
     def recreate(self):
         &#34;&#34;&#34;Rebalances the tree by recreating it from scratch.
         &#34;&#34;&#34;
-        self.__init__(self.list(), 0 if self.axis == 0 else 1)
+        if self.point:
+            self.__init__(self.list(), 0 if self.axis == 0 else 1)
     
     def list(self):
         &#34;&#34;&#34;Returns an unsorted list of all the points in the tree.
@@ -174,7 +188,73 @@ class kdtree:
         Returns:
             List[tuple]: An unsorted list of points in the tree.            
         &#34;&#34;&#34;
-        return self._listhelp([])
+        if self.point:
+            return self._listhelp([])
+        return []
+    
+    def remove(self, point):
+        &#34;&#34;&#34;Removes a point from the tree.
+        
+        Does nothing if the point isn&#39;t in the tree.
+        
+        Args:
+            point (tuple): Point to remove.
+        &#34;&#34;&#34;
+        if self.point is None:
+            return None
+        
+        if self.point == point:
+            l = self.list()
+            l.remove(point)
+            self.__init__(l, 0 if self.axis == 0 else 1)
+            return None
+            
+        b = self._bestchild(point)
+        
+        if b:
+            if b.point == point and b.left is None and b.right is None:
+                if b == self.left:
+                    self.left = None
+                else:
+                    self.right = None
+            else:
+                b.remove(point)
+    
+    def rangesearch(self, range_, inside=None):
+        &#34;&#34;&#34;Returns a list with all points inside the 
+        range including end points.
+        
+        Ranges for all dimensions must be specified.
+        
+        Args:
+            range_ (List[tuple]): A list with the range.
+        
+        Returns:
+            List[tuple]: A list with all the points within the range.
+            
+        Example:
+            Example usage:
+            
+                &gt;&gt;&gt; tree = kdtree([(7,2), (5,4), (9,6), (4,7), (8,1), (2,3)])
+                &gt;&gt;&gt; range_ = [(6,9),(0,10)]
+                &gt;&gt;&gt; tree.rangesearch(range_)
+                [(7, 2), (9, 6), (8, 1)]
+        &#34;&#34;&#34;
+        if inside is None:
+            inside = []
+        if self._inrange(range_, self.point):
+            inside.append(self.point)
+        if self.point[self.axis] &lt;= range_[self.axis][1]:
+            self.right.rangesearch(range_, inside) if self.right else None
+        if self.point[self.axis] &gt;= range_[self.axis][0]:
+            self.left.rangesearch(range_, inside) if self.left else None
+        return inside
+    
+    def _inrange(self, range_, point):
+        for i in range(len(point)):
+            if point[i] &lt; range_[i][0] or point[i] &gt; range_[i][1]:
+                return False
+        return True
     
     def _listhelp(self, list):
         list.append(self.point)
@@ -204,8 +284,8 @@ class kdtree:
     
     def _distsquared(self, a, b):
         if len(a) != len(b):
-            raise &#34;Tree contains points of different dimensions.&#34;
-        return sum([(a[i]-b[i])**2 for i in range(len(a))])
+            raise IndexError(&#34;Two points within the tree are of different length&#34;)
+        return sum((a[i]-b[i])**2 for i in range(len(a)))
     
     def __repr__(self):
         &#34;&#34;&#34;Returns a string representation of the k-d tree.
@@ -213,7 +293,25 @@ class kdtree:
         Returns:
             string: A representation of the tree.
         &#34;&#34;&#34;
-        return &#34;, &#34;.join([str(self.point),self.left.__repr__(),self.right.__repr__()]).join([&#34;(&#34;,&#34;)&#34;])</code></pre>
+        return &#34;, &#34;.join([str(self.point),self.left.__repr__(),self.right.__repr__()]).join([&#34;(&#34;,&#34;)&#34;])
+
+
+def distsquared(a, b):
+    &#34;&#34;&#34;Returns the squared distance between two points a and b.
+    
+    Args:
+        a (tuple): The first point.
+        b (tuple): The second point.
+        
+    Returns:
+        float: The squared distance between a and b.
+    &#34;&#34;&#34;
+    # Ifall man vill använda den här funktionen till något annat.
+    # Måste ha en separat om man bara vill importera trädet och
+    # inte den här funktionen för att trädet ska fungera.
+    if len(a) != len(b):
+        raise IndexError(&#34;The two points are of different length&#34;)
+    return sum((a[i]-b[i])**2 for i in range(len(a)))</code></pre>
 </details>
 </section>
 <section>
@@ -221,6 +319,48 @@ class kdtree:
 <section>
 </section>
 <section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="kdtree.distsquared"><code class="name flex">
+<span>def <span class="ident">distsquared</span></span>(<span>a, b)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns the squared distance between two points a and b.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>a</code></strong> :&ensp;<code>tuple</code></dt>
+<dd>The first point.</dd>
+<dt><strong><code>b</code></strong> :&ensp;<code>tuple</code></dt>
+<dd>The second point.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>float</code></dt>
+<dd>The squared distance between a and b.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def distsquared(a, b):
+    &#34;&#34;&#34;Returns the squared distance between two points a and b.
+    
+    Args:
+        a (tuple): The first point.
+        b (tuple): The second point.
+        
+    Returns:
+        float: The squared distance between a and b.
+    &#34;&#34;&#34;
+    # Ifall man vill använda den här funktionen till något annat.
+    # Måste ha en separat om man bara vill importera trädet och
+    # inte den här funktionen för att trädet ska fungera.
+    if len(a) != len(b):
+        raise IndexError(&#34;The two points are of different length&#34;)
+    return sum((a[i]-b[i])**2 for i in range(len(a)))</code></pre>
+</details>
+</dd>
+</dl>
 </section>
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
@@ -269,20 +409,32 @@ class kdtree:
             points (List[tuple]): List of k-tuples to add to the k-d tree.
             depth (int): Depth of the k-d tree.
         &#34;&#34;&#34;
-        n = len(points[0])
-        
-        self.axis = depth % n
-        
-        points.sort(key = lambda x: x[self.axis])
-        mid = len(points)//2
+        if points:
+            n = len(points[0])
             
-        self.point = points[mid]
-        self.left = kdtree(points[:mid], depth + 1) if points[:mid] else None
-        self.right = kdtree(points[mid + 1:], depth + 1) if points[mid + 1:] else None
+            self.axis = depth % n
+            
+            points.sort(key = lambda x: x[self.axis])
+            mid = len(points)//2
+            
+            self.point = points[mid]
+            self.left = kdtree(points[:mid], depth + 1) if points[:mid] else None
+            self.right = kdtree(points[mid + 1:], depth + 1) if points[mid + 1:] else None
+        else:
+            self.point = None
+            self.right = None
+            self.left = None
+            if self.right:
+                del self.right
+            if self.left:
+                del self.left
     
     def nearest(self, point, best = None):
         &#34;&#34;&#34;Returns the point in the tree closest to the search target
         using nearest neighbor search.
+        
+        If there are more than one the same distance away from the point
+        it returns one of them.
         
         Args:
             point (tuple): The search target. 
@@ -313,21 +465,25 @@ class kdtree:
         Args:
             point (tuple): The point to add.
         &#34;&#34;&#34;
-        if point[self.axis] &lt; self.point[self.axis]:
-            if self.left:
-                self.left.add(point)
+        if self.point:
+            if point[self.axis] &lt; self.point[self.axis]:
+                if self.left:
+                    self.left.add(point)
+                else:
+                    self.left = kdtree([point])
             else:
-                self.left = kdtree([point])
+                if self.right:
+                    self.right.add(point)
+                else:
+                    self.right = kdtree([point])
         else:
-            if self.right:
-                self.right.add(point)
-            else:
-                self.right = kdtree([point])
+            self.__init__([point])
     
     def recreate(self):
         &#34;&#34;&#34;Rebalances the tree by recreating it from scratch.
         &#34;&#34;&#34;
-        self.__init__(self.list(), 0 if self.axis == 0 else 1)
+        if self.point:
+            self.__init__(self.list(), 0 if self.axis == 0 else 1)
     
     def list(self):
         &#34;&#34;&#34;Returns an unsorted list of all the points in the tree.
@@ -335,7 +491,73 @@ class kdtree:
         Returns:
             List[tuple]: An unsorted list of points in the tree.            
         &#34;&#34;&#34;
-        return self._listhelp([])
+        if self.point:
+            return self._listhelp([])
+        return []
+    
+    def remove(self, point):
+        &#34;&#34;&#34;Removes a point from the tree.
+        
+        Does nothing if the point isn&#39;t in the tree.
+        
+        Args:
+            point (tuple): Point to remove.
+        &#34;&#34;&#34;
+        if self.point is None:
+            return None
+        
+        if self.point == point:
+            l = self.list()
+            l.remove(point)
+            self.__init__(l, 0 if self.axis == 0 else 1)
+            return None
+            
+        b = self._bestchild(point)
+        
+        if b:
+            if b.point == point and b.left is None and b.right is None:
+                if b == self.left:
+                    self.left = None
+                else:
+                    self.right = None
+            else:
+                b.remove(point)
+    
+    def rangesearch(self, range_, inside=None):
+        &#34;&#34;&#34;Returns a list with all points inside the 
+        range including end points.
+        
+        Ranges for all dimensions must be specified.
+        
+        Args:
+            range_ (List[tuple]): A list with the range.
+        
+        Returns:
+            List[tuple]: A list with all the points within the range.
+            
+        Example:
+            Example usage:
+            
+                &gt;&gt;&gt; tree = kdtree([(7,2), (5,4), (9,6), (4,7), (8,1), (2,3)])
+                &gt;&gt;&gt; range_ = [(6,9),(0,10)]
+                &gt;&gt;&gt; tree.rangesearch(range_)
+                [(7, 2), (9, 6), (8, 1)]
+        &#34;&#34;&#34;
+        if inside is None:
+            inside = []
+        if self._inrange(range_, self.point):
+            inside.append(self.point)
+        if self.point[self.axis] &lt;= range_[self.axis][1]:
+            self.right.rangesearch(range_, inside) if self.right else None
+        if self.point[self.axis] &gt;= range_[self.axis][0]:
+            self.left.rangesearch(range_, inside) if self.left else None
+        return inside
+    
+    def _inrange(self, range_, point):
+        for i in range(len(point)):
+            if point[i] &lt; range_[i][0] or point[i] &gt; range_[i][1]:
+                return False
+        return True
     
     def _listhelp(self, list):
         list.append(self.point)
@@ -365,8 +587,8 @@ class kdtree:
     
     def _distsquared(self, a, b):
         if len(a) != len(b):
-            raise &#34;Tree contains points of different dimensions.&#34;
-        return sum([(a[i]-b[i])**2 for i in range(len(a))])
+            raise IndexError(&#34;Two points within the tree are of different length&#34;)
+        return sum((a[i]-b[i])**2 for i in range(len(a)))
     
     def __repr__(self):
         &#34;&#34;&#34;Returns a string representation of the k-d tree.
@@ -398,16 +620,19 @@ class kdtree:
     Args:
         point (tuple): The point to add.
     &#34;&#34;&#34;
-    if point[self.axis] &lt; self.point[self.axis]:
-        if self.left:
-            self.left.add(point)
+    if self.point:
+        if point[self.axis] &lt; self.point[self.axis]:
+            if self.left:
+                self.left.add(point)
+            else:
+                self.left = kdtree([point])
         else:
-            self.left = kdtree([point])
+            if self.right:
+                self.right.add(point)
+            else:
+                self.right = kdtree([point])
     else:
-        if self.right:
-            self.right.add(point)
-        else:
-            self.right = kdtree([point])</code></pre>
+        self.__init__([point])</code></pre>
 </details>
 </dd>
 <dt id="kdtree.kdtree.list"><code class="name flex">
@@ -430,7 +655,9 @@ class kdtree:
     Returns:
         List[tuple]: An unsorted list of points in the tree.            
     &#34;&#34;&#34;
-    return self._listhelp([])</code></pre>
+    if self.point:
+        return self._listhelp([])
+    return []</code></pre>
 </details>
 </dd>
 <dt id="kdtree.kdtree.nearest"><code class="name flex">
@@ -439,6 +666,8 @@ class kdtree:
 <dd>
 <div class="desc"><p>Returns the point in the tree closest to the search target
 using nearest neighbor search.</p>
+<p>If there are more than one the same distance away from the point
+it returns one of them.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>point</code></strong> :&ensp;<code>tuple</code></dt>
@@ -458,6 +687,9 @@ using nearest neighbor search.</p>
 <pre><code class="python">def nearest(self, point, best = None):
     &#34;&#34;&#34;Returns the point in the tree closest to the search target
     using nearest neighbor search.
+    
+    If there are more than one the same distance away from the point
+    it returns one of them.
     
     Args:
         point (tuple): The search target. 
@@ -483,6 +715,65 @@ using nearest neighbor search.</p>
     return best</code></pre>
 </details>
 </dd>
+<dt id="kdtree.kdtree.rangesearch"><code class="name flex">
+<span>def <span class="ident">rangesearch</span></span>(<span>self, range_, inside=None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns a list with all points inside the
+range including end points.</p>
+<p>Ranges for all dimensions must be specified.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>range_</code></strong> :&ensp;<code>List[tuple]</code></dt>
+<dd>A list with the range.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>List[tuple]</code></dt>
+<dd>A list with all the points within the range.</dd>
+</dl>
+<h2 id="example">Example</h2>
+<p>Example usage:</p>
+<pre><code>&gt;&gt;&gt; tree = kdtree([(7,2), (5,4), (9,6), (4,7), (8,1), (2,3)])
+&gt;&gt;&gt; range_ = [(6,9),(0,10)]
+&gt;&gt;&gt; tree.rangesearch(range_)
+[(7, 2), (9, 6), (8, 1)]
+</code></pre></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def rangesearch(self, range_, inside=None):
+    &#34;&#34;&#34;Returns a list with all points inside the 
+    range including end points.
+    
+    Ranges for all dimensions must be specified.
+    
+    Args:
+        range_ (List[tuple]): A list with the range.
+    
+    Returns:
+        List[tuple]: A list with all the points within the range.
+        
+    Example:
+        Example usage:
+        
+            &gt;&gt;&gt; tree = kdtree([(7,2), (5,4), (9,6), (4,7), (8,1), (2,3)])
+            &gt;&gt;&gt; range_ = [(6,9),(0,10)]
+            &gt;&gt;&gt; tree.rangesearch(range_)
+            [(7, 2), (9, 6), (8, 1)]
+    &#34;&#34;&#34;
+    if inside is None:
+        inside = []
+    if self._inrange(range_, self.point):
+        inside.append(self.point)
+    if self.point[self.axis] &lt;= range_[self.axis][1]:
+        self.right.rangesearch(range_, inside) if self.right else None
+    if self.point[self.axis] &gt;= range_[self.axis][0]:
+        self.left.rangesearch(range_, inside) if self.left else None
+    return inside</code></pre>
+</details>
+</dd>
 <dt id="kdtree.kdtree.recreate"><code class="name flex">
 <span>def <span class="ident">recreate</span></span>(<span>self)</span>
 </code></dt>
@@ -495,7 +786,52 @@ using nearest neighbor search.</p>
 <pre><code class="python">def recreate(self):
     &#34;&#34;&#34;Rebalances the tree by recreating it from scratch.
     &#34;&#34;&#34;
-    self.__init__(self.list(), 0 if self.axis == 0 else 1)</code></pre>
+    if self.point:
+        self.__init__(self.list(), 0 if self.axis == 0 else 1)</code></pre>
+</details>
+</dd>
+<dt id="kdtree.kdtree.remove"><code class="name flex">
+<span>def <span class="ident">remove</span></span>(<span>self, point)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Removes a point from the tree.</p>
+<p>Does nothing if the point isn't in the tree.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>point</code></strong> :&ensp;<code>tuple</code></dt>
+<dd>Point to remove.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def remove(self, point):
+    &#34;&#34;&#34;Removes a point from the tree.
+    
+    Does nothing if the point isn&#39;t in the tree.
+    
+    Args:
+        point (tuple): Point to remove.
+    &#34;&#34;&#34;
+    if self.point is None:
+        return None
+    
+    if self.point == point:
+        l = self.list()
+        l.remove(point)
+        self.__init__(l, 0 if self.axis == 0 else 1)
+        return None
+        
+    b = self._bestchild(point)
+    
+    if b:
+        if b.point == point and b.left is None and b.right is None:
+            if b == self.left:
+                self.left = None
+            else:
+                self.right = None
+        else:
+            b.remove(point)</code></pre>
 </details>
 </dd>
 </dl>
@@ -509,15 +845,22 @@ using nearest neighbor search.</p>
 <ul></ul>
 </div>
 <ul id="index">
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="kdtree.distsquared" href="#kdtree.distsquared">distsquared</a></code></li>
+</ul>
+</li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
 <h4><code><a title="kdtree.kdtree" href="#kdtree.kdtree">kdtree</a></code></h4>
-<ul class="">
+<ul class="two-column">
 <li><code><a title="kdtree.kdtree.add" href="#kdtree.kdtree.add">add</a></code></li>
 <li><code><a title="kdtree.kdtree.list" href="#kdtree.kdtree.list">list</a></code></li>
 <li><code><a title="kdtree.kdtree.nearest" href="#kdtree.kdtree.nearest">nearest</a></code></li>
+<li><code><a title="kdtree.kdtree.rangesearch" href="#kdtree.kdtree.rangesearch">rangesearch</a></code></li>
 <li><code><a title="kdtree.kdtree.recreate" href="#kdtree.kdtree.recreate">recreate</a></code></li>
+<li><code><a title="kdtree.kdtree.remove" href="#kdtree.kdtree.remove">remove</a></code></li>
 </ul>
 </li>
 </ul>
